@@ -1,8 +1,13 @@
 FROM php:8.2-fpm
 
-# Update package list and install dependencies
+# Set working directory
+WORKDIR /var/www/html
+
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
+    curl \
+    gnupg \
     libpng-dev \
     libjpeg-dev \
     libwebp-dev \
@@ -22,19 +27,29 @@ RUN apt-get update && apt-get install -y \
 # Install PHP extensions
 RUN docker-php-ext-configure gd --with-freetype --with-jpeg --with-webp \
     && docker-php-ext-install gd \
-    && docker-php-ext-install mysqli pdo_mysql mbstring zip exif pcntl bcmath opcache \
-    && rm -rf /var/lib/mysql/*
+    && docker-php-ext-install mysqli pdo_mysql mbstring zip exif pcntl bcmath opcache
 
 # Install Composer
 COPY --from=composer/composer:latest-bin /composer /usr/bin/composer
 
-# Copy existing application directory contents
-COPY . /var/www/html/
+# Install Node.js v20.x and npm
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
+    && npm -v \
+    && node -v
 
-# Set ownership and permissions for the /var/www/html directory to www-data
-RUN chown -R www-data:www-data /var/www/html/
+# Copy project files
+COPY . /var/www/html
 
+# Set permissions
+RUN chown -R www-data:www-data /var/www/html
+
+# Switch to non-root user
 USER www-data
+
+# Run composer install and npm install as www-data
+RUN composer install --no-interaction --prefer-dist --optimize-autoloader \
+    && npm install
 
 EXPOSE 9000
 
