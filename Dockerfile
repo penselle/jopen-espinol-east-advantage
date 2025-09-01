@@ -42,12 +42,14 @@ RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
 COPY . /var/www/html
 
 # Set permissions
-RUN chown -R www-data:www-data /var/www/html
+RUN chown -R www-data:www-data /var/www/html \
+    && mkdir -p /var/www/.npm \
+    && chown -R www-data:www-data /var/www/.npm
 
 # Switch to non-root user
 USER www-data
 
-# Run composer install and npm install as www-data
+# Run composer and npm install
 RUN composer install --no-interaction --prefer-dist --optimize-autoloader \
     && npm install
 
